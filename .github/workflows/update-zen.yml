@@ -91,10 +91,9 @@ jobs:
           gh api "repos/$GITHUB_REPOSITORY/branches/$DEFAULT_BRANCH/protection/required_status_checks" > "$RUNNER_TEMP/required-checks.json"
           jq -e '
             [.contexts[]?, .checks[]?.context] as $required |
-            ["Build packages", "Check x86_64-linux", "Check aarch64-darwin"] |
-            all(.[]; . as $check | $required | index($check) != null)
+            $required | index("CI") != null
           ' "$RUNNER_TEMP/required-checks.json" || {
-            echo "Require all package builds and both platforms flake checks before enabling auto-merge." >&2
+            echo "Require the CI gate before enabling auto-merge." >&2
             exit 1
           }
           gh pr merge "$PR_URL" --repo "$GITHUB_REPOSITORY" --auto --squash --match-head-commit "$PR_HEAD"

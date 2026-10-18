@@ -1,0 +1,93 @@
+name: ci
+
+"on":
+  pull_request:
+  push:
+    branches: [master]
+    paths-ignore: ["**/*.md"]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+
+env:
+  NIX_CONFIG: |
+    access-tokens = github.com=${{ github.token }}
+    accept-flake-config = true
+
+jobs:
+  plan:
+    name: Format, evaluate, and plan
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      has-builds: ${{ steps.plan.outputs.has-builds }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: DeterminateSystems/nix-installer-action@3138316df39ed29be04236d7ffc686fa525866aa # v23
+      - uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17
+        with:
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          name: alyraffauf
+      - name: Check formatting and flake evaluation
+        run: |
+          nix fmt -- --ci
+          nix flake check --all-systems --no-build
+      - name: Select native builds
+        id: plan
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          arguments=()
+          if [[ -n "$BASE_SHA" ]]; then
+            git fetch --no-tags --depth=1 origin "$BASE_SHA"
+            arguments+=(--base "$BASE_SHA")
+          fi
+          python3 scripts/ci-plan.py "${arguments[@]}" > "$RUNNER_TEMP/ci-plan.json"
+          echo "matrix=$(jq -c . "$RUNNER_TEMP/ci-plan.json")" >> "$GITHUB_OUTPUT"
+          echo "has-builds=$(jq '.include | length > 0' "$RUNNER_TEMP/ci-plan.json")" >> "$GITHUB_OUTPUT"
+          jq -r '"Selected builds: \(.include | length)", (.include[] | "- " + .name)' "$RUNNER_TEMP/ci-plan.json" >> "$GITHUB_STEP_SUMMARY"
+
+  build:
+    name: ${{ matrix.name }}
+    needs: plan
+    if: needs.plan.outputs.has-builds == 'true'
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: DeterminateSystems/nix-installer-action@3138316df39ed29be04236d7ffc686fa525866aa # v23
+      - uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17
+        with:
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          name: alyraffauf
+      - name: Build derivation
+        env:
+          INSTALLABLE: ${{ matrix.installable }}
+        run: nix build -L --no-link ".#$INSTALLABLE"
+
+  result:
+    name: CI
+    if: always()
+    needs: [plan, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every selected build
+        env:
+          PLAN_RESULT: ${{ needs.plan.result }}
+          HAS_BUILDS: ${{ needs.plan.outputs.has-builds }}
+          BUILD_RESULT: ${{ needs.build.result }}
+        run: |
+          test "$PLAN_RESULT" = success
+          if [[ "$HAS_BUILDS" == true ]]; then
+            test "$BUILD_RESULT" = success
+          else
+            test "$HAS_BUILDS" = false
+            test "$BUILD_RESULT" = skipped
+          fi
