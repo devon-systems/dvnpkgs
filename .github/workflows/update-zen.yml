@@ -75,10 +75,10 @@ jobs:
           gh api "repos/$GITHUB_REPOSITORY/branches/$DEFAULT_BRANCH/protection/required_status_checks" > "$RUNNER_TEMP/required-checks.json"
           jq -e '
             [.contexts[]?, .checks[]?.context] as $required |
-            ["Build x86_64-linux", "Build aarch64-darwin", "Check x86_64-linux", "Check aarch64-darwin"] |
+            ["Build packages", "Check x86_64-linux", "Check aarch64-darwin"] |
             all(.[]; . as $check | $required | index($check) != null)
           ' "$RUNNER_TEMP/required-checks.json" || {
-            echo "Require both platforms build and flake checks before enabling auto-merge." >&2
+            echo "Require all package builds and both platforms flake checks before enabling auto-merge." >&2
             exit 1
           }
           gh pr merge "$PR_URL" --repo "$GITHUB_REPOSITORY" --auto --squash --match-head-commit "$PR_HEAD"
