@@ -1,0 +1,44 @@
+name: build-nix
+
+"on":
+  pull_request:
+  push:
+    branches: [master]
+    paths-ignore: ["**/*.md"]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+
+env:
+  NIX_CONFIG: |
+    access-tokens = github.com=${{ github.token }}
+    accept-flake-config = true
+
+jobs:
+  build-packages:
+    name: Build ${{ matrix.system }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - system: x86_64-linux
+            runner: ubuntu-latest
+          - system: aarch64-darwin
+            runner: macos-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+      - uses: DeterminateSystems/nix-installer-action@3138316df39ed29be04236d7ffc686fa525866aa # v23
+      - uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17
+        with:
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          name: alyraffauf
+      - name: Build all exported packages
+        run: nix develop -c just build-all

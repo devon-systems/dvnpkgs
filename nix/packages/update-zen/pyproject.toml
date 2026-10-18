@@ -1,0 +1,16 @@
+[project]
+name = "update-zen"
+version = "0.1.0"
+description = "Update dvnpkgs Zen release pins"
+requires-python = ">=3.12"
+dependencies = [
+  "httpx>=0.28,<1",
+  "pydantic>=2.11,<3",
+]
+
+[project.scripts]
+update-zen = "update_zen.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.11,<0.14"]
+build-backend = "uv_build"

@@ -1,0 +1,8 @@
+.DS_Store
+.direnv/
+.pre-commit-config.yaml
+.ruff_cache/
+__pycache__/
+.venv/
+result
+result-*

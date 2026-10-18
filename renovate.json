@@ -1,0 +1,46 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "docker:pinDigests",
+    ":dependencyDashboard",
+    "helpers:pinGitHubActionDigests"
+  ],
+  "labels": ["dependencies"],
+  "timezone": "America/New_York",
+  "platformAutomerge": true,
+
+  "nix": {
+    "enabled": true
+  },
+
+  "lockFileMaintenance": {
+    "enabled": true,
+    "automerge": true,
+    "schedule": ["before 4am"]
+  },
+
+  "packageRules": [
+    {
+      "description": "Auto-merge routine updates after CI passes",
+      "matchUpdateTypes": ["minor", "patch", "digest", "pin", "pinDigest"],
+      "automerge": true
+    },
+    {
+      "description": "Major bumps stay manual",
+      "matchUpdateTypes": ["major"],
+      "automerge": false
+    },
+    {
+      "description": "Lock file maintenance updates FlakeHub inputs",
+      "matchManagers": ["nix"],
+      "matchPackageNames": ["/^https:\\/\\/flakehub\\.com\\/f\\//"],
+      "enabled": false
+    }
+  ],
+
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security"]
+  }
+}
