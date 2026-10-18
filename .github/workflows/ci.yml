@@ -34,8 +34,8 @@ jobs:
           name: alyraffauf
       - name: Check formatting and flake evaluation
         run: |
-          nix fmt -- --ci
-          nix flake check --all-systems --no-build
+          nix fmt --no-update-lock-file -- --ci
+          nix flake check --all-systems --no-build --no-update-lock-file
       - name: Select native builds
         id: plan
         env:
@@ -69,7 +69,7 @@ jobs:
       - name: Build derivation
         env:
           INSTALLABLE: ${{ matrix.installable }}
-        run: nix build -L --no-link ".#$INSTALLABLE"
+        run: nix build -L --no-link --no-update-lock-file ".#$INSTALLABLE"
 
   result:
     name: CI
