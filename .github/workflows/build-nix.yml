@@ -20,17 +20,32 @@ env:
     accept-flake-config = true
 
 jobs:
+  discover-packages:
+    name: Discover packages
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.packages.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: DeterminateSystems/nix-installer-action@3138316df39ed29be04236d7ffc686fa525866aa # v23
+      - name: List exported packages
+        id: packages
+        run: |
+          nix eval --json .#packages --apply 'builtins.mapAttrs (_: builtins.attrNames)' > "$RUNNER_TEMP/packages.json"
+          matrix=$(jq -ce '{include: [to_entries[] | .key as $system | .value[] | {
+            package: .,
+            system: $system,
+            runner: ({"x86_64-linux": "ubuntu-latest", "aarch64-darwin": "macos-latest"}[$system] // error("No runner for " + $system))
+          }]} | select(.include | length > 0)' "$RUNNER_TEMP/packages.json")
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+
   build-packages:
-    name: Build ${{ matrix.system }}
+    name: Build ${{ matrix.package }} (${{ matrix.system }})
+    needs: discover-packages
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - system: x86_64-linux
-            runner: ubuntu-latest
-          - system: aarch64-darwin
-            runner: macos-latest
+      matrix: ${{ fromJSON(needs.discover-packages.outputs.matrix) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -40,5 +55,20 @@ jobs:
         with:
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
           name: alyraffauf
-      - name: Build all exported packages
-        run: nix develop -c just build-all
+      - name: Build package
+        env:
+          PACKAGE: ${{ matrix.package }}
+          SYSTEM: ${{ matrix.system }}
+        run: nix build -L --no-link ".#packages.$SYSTEM.$PACKAGE"
+
+  build-result:
+    name: Build packages
+    if: always()
+    needs: [discover-packages, build-packages]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require all package builds
+        env:
+          DISCOVERY_RESULT: ${{ needs.discover-packages.result }}
+          BUILD_RESULT: ${{ needs.build-packages.result }}
+        run: test "$DISCOVERY_RESULT" = success && test "$BUILD_RESULT" = success
