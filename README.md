@@ -55,8 +55,8 @@ nix flake check
 
 CI builds each exported package for its supported systems: `x86_64-linux` and
 `aarch64-darwin`. Pull requests build packages and checks whose Nix derivations
-change. CI workflow changes and pushes to `master` run every build. Formatting
-and flake evaluation run on every pull request.
+change. Changes to `flake.nix`, `flake.lock`, or CI logic run every build, as do
+pushes to `master`. Formatting and flake evaluation run on every pull request.
 
 ## Update
 

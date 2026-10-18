@@ -37,7 +37,7 @@ def evaluate_derivations(flake: str) -> dict[str, dict[str, dict[str, str]]]:
 
 
 def plan_builds(base: str | None) -> list[dict[str, str]]:
-    """Select changed builds, or all builds without a base or after CI edits."""
+    """Select changed builds, or all builds after flake or CI edits."""
     previous: dict[str, dict[str, dict[str, str]]] = {}
     if base is not None:
         changed_files = subprocess.run(
@@ -46,12 +46,13 @@ def plan_builds(base: str | None) -> list[dict[str, str]]:
             stdout=subprocess.PIPE,
             text=True,
         ).stdout.splitlines()
-        ci_changed = any(
-            path.startswith(".github/workflows/") or path == "scripts/ci-plan.py"
+        shared_inputs_changed = any(
+            path.startswith(".github/workflows/")
+            or path in {"flake.nix", "flake.lock", "scripts/ci-plan.py"}
             for path in changed_files
         )
-        if not ci_changed:
-            flake = f"git+{Path.cwd().as_uri()}?rev={base}"
+        if not shared_inputs_changed:
+            flake = f"git+{Path.cwd().as_uri()}?rev={base}&shallow=1"
             previous = evaluate_derivations(flake)
 
     builds = []
