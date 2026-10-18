@@ -4,16 +4,16 @@ Personal Nix packages and pinned upstream flakes.
 
 ## Packages
 
-| Export          | Source                                                        | Linux x86-64 | Apple Silicon |
-| --------------- | ------------------------------------------------------------- | ------------ | ------------- |
-| `tg`            | Re-export from `aly.codes/tg`                                 | Yes          | Yes           |
-| `tgmcp`         | Re-export from `aly.codes/tg`                                 | Yes          | Yes           |
-| `crush`         | Personal [crush](https://github.com/charmbracelet/crush) fork | Yes          | Yes           |
-| `sway`          | Sway with the wlroots patches                                 | Yes          | No            |
-| `tmux`          | Personal tmux config                                          | Yes          | Yes           |
-| `vicinae-pdsls` | PDSls extension for Vicinae                                   | Yes          | Yes           |
-| `zen-browser`   | Patched Zen release binaries                                  | Yes          | No            |
-| `update-zen`    | Python release updater built with uv2nix                      | Yes          | Yes           |
+| Export          | Source                                                        | `x86_64-linux` | `aarch64-darwin` |
+| --------------- | ------------------------------------------------------------- | -------------- | ---------------- |
+| `tg`            | Re-export from `aly.codes/tg`                                 | Yes            | Yes              |
+| `tgmcp`         | Re-export from `aly.codes/tg`                                 | Yes            | Yes              |
+| `crush`         | Personal [crush](https://github.com/charmbracelet/crush) fork | Yes            | Yes              |
+| `sway`          | Sway with the wlroots patches                                 | Yes            | No               |
+| `tmux`          | Personal tmux config                                          | Yes            | Yes              |
+| `vicinae-pdsls` | PDSls extension for Vicinae                                   | Yes            | Yes              |
+| `zen-browser`   | Patched Zen release binaries                                  | Yes            | No               |
+| `update-zen`    | Python release updater built with uv2nix                      | Yes            | Yes              |
 
 ## Use
 
@@ -53,7 +53,8 @@ nix fmt
 nix flake check
 ```
 
-CI builds every exported package on native Linux and Apple Silicon runners.
+CI builds each exported package for its supported systems: `x86_64-linux` and
+`aarch64-darwin`.
 
 ## Update
 

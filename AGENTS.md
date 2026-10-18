@@ -16,7 +16,7 @@ Keep package export names stable.
 
 Run `nix fmt` and `nix flake check` before committing. Build changed packages
 on their supported platforms. Use `just build-all` to build every export for
-the current system. CI builds on native Linux and Apple Silicon runners.
+the current system. CI builds on `x86_64-linux` and `aarch64-darwin` runners.
 
 ## Update dependencies
 
