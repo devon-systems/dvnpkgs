@@ -1,0 +1,18 @@
+name: update-vicinae-pdsls
+
+"on":
+  schedule:
+    - cron: "30 4 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  update-vicinae-pdsls:
+    uses: ./.github/workflows/update-package.yml
+    secrets: inherit
+    with:
+      package: vicinae-pdsls
+      command: nix develop -c python scripts/update-vicinae-pdsls.py --report "$RUNNER_TEMP/update-pr.json"
+      paths: nix/packages/vicinae-pdsls/sources.json

@@ -8,92 +8,11 @@ name: update-zen
 permissions:
   contents: read
 
-concurrency:
-  cancel-in-progress: false
-  group: update-zen
-
-env:
-  NIX_CONFIG: |
-    access-tokens = github.com=${{ github.token }}
-    accept-flake-config = true
-
 jobs:
   update-zen:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - name: Create app token
-        id: app-token
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
-        with:
-          client-id: ${{ vars.APP_CLIENT_ID }}
-          private-key: ${{ secrets.APP_PRIVATE_KEY }}
-          permission-contents: write
-          permission-pull-requests: write
-          permission-administration: read
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.event.repository.default_branch }}
-          token: ${{ steps.app-token.outputs.token }}
-      - uses: DeterminateSystems/nix-installer-action@3138316df39ed29be04236d7ffc686fa525866aa # v23
-      - uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17
-        with:
-          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-          name: alyraffauf
-      - name: Update Zen release metadata
-        id: release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          cp nix/packages/zen-browser/sources.json "$RUNNER_TEMP/zen-before.json"
-          nix run .#update-zen
-          echo "version=$(jq -r .version nix/packages/zen-browser/sources.json)" >> "$GITHUB_OUTPUT"
-      - name: Describe the release update
-        env:
-          GH_TOKEN: ${{ github.token }}
-          ZEN_VERSION: ${{ steps.release.outputs.version }}
-        run: |
-          jq -nr --slurpfile before "$RUNNER_TEMP/zen-before.json" --slurpfile after nix/packages/zen-browser/sources.json '
-            $before[0] as $before | $after[0] as $after |
-            [
-              "| Pin | Before | After |",
-              "| --- | --- | --- |",
-              "| Zen | `\($before.version)` | `\($after.version)` |",
-              "| Firefox | `\($before.firefoxVersion)` | `\($after.firefoxVersion)` |",
-              "| x86_64-linux SHA-256 | `\($before["x86_64-linux"].hash)` | `\($after["x86_64-linux"].hash)` |"
-            ] | .[]
-          ' > "$RUNNER_TEMP/zen-pr.md"
-          gh release view "$ZEN_VERSION" --repo zen-browser/desktop --json body,url --jq '
-            "\n[Upstream release notes](\(.url))\n\n" +
-            ((.body // "") | split("\n") | map("> " + .) | join("\n"))
-          ' >> "$RUNNER_TEMP/zen-pr.md"
-      - name: Open the release PR
-        id: pull-request
-        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
-        with:
-          token: ${{ steps.app-token.outputs.token }}
-          sign-commits: true
-          base: ${{ github.event.repository.default_branch }}
-          branch: updates/zen-browser
-          add-paths: nix/packages/zen-browser/sources.json
-          commit-message: "chore(zen-browser): update to ${{ steps.release.outputs.version }}"
-          title: "chore(zen-browser): update to ${{ steps.release.outputs.version }}"
-          body-path: ${{ runner.temp }}/zen-pr.md
-      - name: Enable auto-merge after required CI
-        if: steps.pull-request.outputs.pull-request-number != ''
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-          PR_URL: ${{ steps.pull-request.outputs.pull-request-url }}
-          PR_HEAD: ${{ steps.pull-request.outputs.pull-request-head-sha }}
-        run: |
-          # Required checks prevent --auto from merging before CI has run.
-          gh api "repos/$GITHUB_REPOSITORY/branches/$DEFAULT_BRANCH/protection/required_status_checks" > "$RUNNER_TEMP/required-checks.json"
-          jq -e '
-            [.contexts[]?, .checks[]?.context] as $required |
-            $required | index("CI") != null
-          ' "$RUNNER_TEMP/required-checks.json" || {
-            echo "Require the CI gate before enabling auto-merge." >&2
-            exit 1
-          }
-          gh pr merge "$PR_URL" --repo "$GITHUB_REPOSITORY" --auto --squash --match-head-commit "$PR_HEAD"
+    uses: ./.github/workflows/update-package.yml
+    secrets: inherit
+    with:
+      package: zen-browser
+      command: bash scripts/update-zen.sh
+      paths: nix/packages/zen-browser/sources.json

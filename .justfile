@@ -13,6 +13,10 @@ update-nixpkgs: (update "nixpkgs")
 update-zen:
     nix run .#update-zen
 
+[group('packages')]
+update-vicinae-pdsls:
+    nix develop -c python scripts/update-vicinae-pdsls.py
+
 [group('checks')]
 fmt:
     nix fmt

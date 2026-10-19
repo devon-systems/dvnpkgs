@@ -11,7 +11,7 @@ Personal Nix packages and pinned upstream flakes.
 | `crush`         | Personal [crush](https://github.com/charmbracelet/crush) fork | Yes            | Yes              |
 | `sway`          | Sway with the wlroots patches                                 | Yes            | No               |
 | `tmux`          | Personal tmux config                                          | Yes            | Yes              |
-| `vicinae-pdsls` | PDSls extension for Vicinae                                   | Yes            | Yes              |
+| `vicinae-pdsls` | PDSls integration for Vicinae                                 | Yes            | Yes              |
 | `zen-browser`   | Patched Zen release binaries                                  | Yes            | No               |
 | `update-zen`    | Python release updater built with uv2nix                      | Yes            | Yes              |
 
@@ -68,6 +68,17 @@ just update tg
 
 Preview a Zen release update with `nix run .#update-zen -- --check`.
 Apply it with `just update-zen`.
+
+Preview an update to the PDSls extension for Vicinae with
+`nix develop -c python scripts/update-vicinae-pdsls.py --check`.
+Apply it with `just update-vicinae-pdsls`.
+
+Daily workflows open signed bot PRs for Zen and the Vicinae extension.
+Each PR shows the old and new pins, an upstream link, and quoted release notes
+when available. Auto-merge waits for the required `CI` check.
+
+The extension updater tracks `extensions/pdsls` in the Raycast repository.
+It skips unrelated commits and updates both source and npm dependency hashes.
 
 ## Credits
 

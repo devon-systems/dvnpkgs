@@ -7,6 +7,8 @@ _: {
         pkgs.jq
         pkgs.just
         pkgs.nixd
+        pkgs.nix-prefetch-git
+        pkgs.prefetch-npm-deps
         pkgs.python3
         pkgs.ruff
         pkgs.ty
