@@ -1,4 +1,4 @@
-"""Update source and npm pins for the Vicinae extension that integrates PDSls."""
+"""Update source and npm pins for a Raycast extension packaged for Vicinae."""
 
 import argparse
 import json
@@ -8,8 +8,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 REPOSITORY = "raycast/extensions"
-DIRECTORY = "extensions/pdsls"
-SOURCES = Path("nix/packages/vicinae-pdsls/sources.json")
+EXTENSIONS = Path("nix/packages/vicinae-extensions")
 
 
 def run(*command: str) -> str:
@@ -38,13 +37,14 @@ def validate_pin(pin: dict[str, str]) -> None:
             raise ValueError(f"Invalid {key}: {pin[key]!r}")
 
 
-def fetch_next_pin(current: dict[str, str]) -> dict[str, str]:
+def fetch_next_pin(name: str, current: dict[str, str]) -> dict[str, str]:
     """Prefetch both hashes when the upstream extension directory changes."""
-    revision = github_sha(f"commits?path={DIRECTORY}&per_page=1", ".[0].sha")
+    directory = f"extensions/{name}"
+    revision = github_sha(f"commits?path={directory}&per_page=1", ".[0].sha")
     if revision == current["rev"]:
         return current
-    current_tree = github_sha(f"git/trees/{current['rev']}:{DIRECTORY}")
-    latest_tree = github_sha(f"git/trees/{revision}:{DIRECTORY}")
+    current_tree = github_sha(f"git/trees/{current['rev']}:{directory}")
+    latest_tree = github_sha(f"git/trees/{revision}:{directory}")
     if current_tree == latest_tree:
         return current
     status = run(
@@ -66,12 +66,12 @@ def fetch_next_pin(current: dict[str, str]) -> dict[str, str]:
             "--rev",
             revision,
             "--sparse-checkout",
-            f"/{DIRECTORY}",
+            f"/{directory}",
         )
     )
     if source["rev"] != revision:
         raise ValueError("Prefetched revision does not match the upstream commit")
-    lockfile = Path(source["path"]) / DIRECTORY / "package-lock.json"
+    lockfile = Path(source["path"]) / directory / "package-lock.json"
     pin = {
         "rev": revision,
         "hash": source["hash"],
@@ -81,13 +81,15 @@ def fetch_next_pin(current: dict[str, str]) -> dict[str, str]:
     return pin
 
 
-def report(current: dict[str, str], updated: dict[str, str]) -> dict[str, object]:
+def report(
+    name: str, current: dict[str, str], updated: dict[str, str]
+) -> dict[str, object]:
     """Provide extension pin changes and the upstream comparison for the PR."""
     return {
-        "package": "vicinae-pdsls",
+        "package": f"vicinae-extensions-{name}",
         "changes": [
-            {"name": name, "before": current[key], "after": updated[key]}
-            for key, name in (
+            {"name": label, "before": current[key], "after": updated[key]}
+            for key, label in (
                 ("rev", "Revision"),
                 ("hash", "Source SHA-256"),
                 ("npmDepsHash", "npm dependencies SHA-256"),
@@ -101,36 +103,46 @@ def main() -> None:
     """Preview or apply an extension update and optionally write PR metadata."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
+        "extension",
+        choices=sorted(path.parent.name for path in EXTENSIONS.glob("*/sources.json")),
+        help="Extension to update",
+    )
+    parser.add_argument(
         "--check", action="store_true", help="Print pins without writing"
     )
     parser.add_argument(
         "--report", type=Path, help="Write pin changes and upstream URL as JSON"
     )
     arguments = parser.parse_args()
+    sources = EXTENSIONS / arguments.extension / "sources.json"
 
     try:
-        current = json.loads(SOURCES.read_text())
+        current = json.loads(sources.read_text())
         if not isinstance(current, dict) or any(
             not isinstance(value, str) for value in current.values()
         ):
             raise ValueError("Expected a JSON object containing string pins")
         validate_pin(current)
-        updated = fetch_next_pin(current)
+        updated = fetch_next_pin(arguments.extension, current)
         if arguments.check:
             print(json.dumps(updated, indent=2))
             return
         if updated != current:
-            with TemporaryDirectory(dir=SOURCES.parent) as directory:
-                temporary = Path(directory) / SOURCES.name
+            with TemporaryDirectory(dir=sources.parent) as directory:
+                temporary = Path(directory) / sources.name
                 temporary.write_text(json.dumps(updated, indent=2) + "\n")
-                temporary.replace(SOURCES)
-            print(f"Updated Vicinae PDSls extension to {updated['rev']}")
+                temporary.replace(sources)
+            print(
+                f"Updated Vicinae {arguments.extension} extension to {updated['rev']}"
+            )
         else:
-            print("Vicinae PDSls extension is current")
+            print(f"Vicinae {arguments.extension} extension is current")
         if arguments.report:
-            arguments.report.write_text(json.dumps(report(current, updated)) + "\n")
+            arguments.report.write_text(
+                json.dumps(report(arguments.extension, current, updated)) + "\n"
+            )
     except (OSError, ValueError, KeyError, subprocess.SubprocessError) as error:
-        parser.exit(1, f"update-vicinae-pdsls: {error}\n")
+        parser.exit(1, f"update-vicinae-extension: {error}\n")
 
 
 if __name__ == "__main__":

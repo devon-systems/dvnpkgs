@@ -14,8 +14,9 @@ update-zen:
     nix run .#update-zen
 
 [group('packages')]
-update-vicinae-pdsls:
-    nix develop -c python scripts/update-vicinae-pdsls.py
+[positional-arguments]
+update-vicinae-extension extension:
+    nix develop -c python scripts/update-vicinae-extension.py "$1"
 
 [group('checks')]
 fmt:

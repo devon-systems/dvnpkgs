@@ -4,16 +4,20 @@ Personal Nix packages and pinned upstream flakes.
 
 ## Packages
 
-| Export          | Source                                                        | `x86_64-linux` | `aarch64-darwin` |
-| --------------- | ------------------------------------------------------------- | -------------- | ---------------- |
-| `tg`            | Re-export from `aly.codes/tg`                                 | Yes            | Yes              |
-| `tgmcp`         | Re-export from `aly.codes/tg`                                 | Yes            | Yes              |
-| `crush`         | Personal [crush](https://github.com/charmbracelet/crush) fork | Yes            | Yes              |
-| `sway`          | Sway with the wlroots patches                                 | Yes            | No               |
-| `tmux`          | Personal tmux config                                          | Yes            | Yes              |
-| `vicinae-pdsls` | PDSls integration for Vicinae                                 | Yes            | Yes              |
-| `zen-browser`   | Patched Zen release binaries                                  | Yes            | No               |
-| `update-zen`    | Python release updater built with uv2nix                      | Yes            | Yes              |
+| Export                     | Source                                                        | `x86_64-linux` | `aarch64-darwin` |
+| -------------------------- | ------------------------------------------------------------- | -------------- | ---------------- |
+| `tg`                       | Re-export from `aly.codes/tg`                                 | Yes            | Yes              |
+| `tgmcp`                    | Re-export from `aly.codes/tg`                                 | Yes            | Yes              |
+| `crush`                    | Personal [crush](https://github.com/charmbracelet/crush) fork | Yes            | Yes              |
+| `sway`                     | Sway with the wlroots patches                                 | Yes            | No               |
+| `tmux`                     | Personal tmux config                                          | Yes            | Yes              |
+| `vicinae-extensions-pdsls` | PDSls integration for Vicinae                                 | Yes            | Yes              |
+| `vicinae-extensions-herdr` | Herdr integration for Vicinae                                 | Yes            | Yes              |
+| `zen-browser`              | Patched Zen release binaries                                  | Yes            | No               |
+| `update-zen`               | Python release updater built with uv2nix                      | Yes            | Yes              |
+
+Herdr's extension uses macOS tools to launch and focus terminals. Those actions
+may fail on Linux. Install the Herdr CLI separately.
 
 ## Use
 
@@ -69,16 +73,18 @@ just update tg
 Preview a Zen release update with `nix run .#update-zen -- --check`.
 Apply it with `just update-zen`.
 
-Preview an update to the PDSls extension for Vicinae with
-`nix develop -c python scripts/update-vicinae-pdsls.py --check`.
-Apply it with `just update-vicinae-pdsls`.
+Preview a Vicinae extension update with
+`nix develop -c python scripts/update-vicinae-extension.py pdsls --check`.
+Apply it with `just update-vicinae-extension pdsls`. Use `herdr` to update the
+Herdr extension.
 
-Daily workflows open signed bot PRs for Zen and the Vicinae extension.
+Daily workflows open signed bot PRs for Zen and the Vicinae extensions.
 Each PR shows the old and new pins, an upstream link, and quoted release notes
 when available. Auto-merge waits for the required `CI` check.
 
-The extension updater tracks `extensions/pdsls` in the Raycast repository.
-It skips unrelated commits and updates both source and npm dependency hashes.
+The extension updater tracks each extension's directory in the Raycast
+repository. It skips unrelated commits and updates both source and npm
+dependency hashes. Each extension has its own pins and update PR.
 
 ## Credits
 

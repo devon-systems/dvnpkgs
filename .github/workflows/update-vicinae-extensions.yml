@@ -1,0 +1,40 @@
+name: update-vicinae-extensions
+
+"on":
+  schedule:
+    - cron: "30 4 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    outputs:
+      extensions: ${{ steps.extensions.outputs.names }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Find packaged extensions
+        id: extensions
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          from pathlib import Path
+
+          pins = Path("nix/packages/vicinae-extensions").glob("*/sources.json")
+          print("names=" + json.dumps(sorted(path.parent.name for path in pins)))
+          PY
+
+  update-vicinae-extension:
+    needs: discover
+    strategy:
+      fail-fast: false
+      matrix:
+        extension: ${{ fromJSON(needs.discover.outputs.extensions) }}
+    uses: ./.github/workflows/update-package.yml
+    secrets: inherit
+    with:
+      package: vicinae-extensions-${{ matrix.extension }}
+      command: nix develop -c python scripts/update-vicinae-extension.py ${{ matrix.extension }} --report "$RUNNER_TEMP/update-pr.json"
+      paths: nix/packages/vicinae-extensions/${{ matrix.extension }}/sources.json
