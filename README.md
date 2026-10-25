@@ -1,6 +1,6 @@
 # dvnpkgs
 
-Personal Nix packages and pinned upstream flakes.
+My Nix packages and pinned upstream exports.
 
 ## Packages
 
@@ -9,60 +9,56 @@ Personal Nix packages and pinned upstream flakes.
 | `tg`                       | Re-export from `aly.codes/tg`                                 | Yes            | Yes              |
 | `tgmcp`                    | Re-export from `aly.codes/tg`                                 | Yes            | Yes              |
 | `crush`                    | Personal [crush](https://github.com/charmbracelet/crush) fork | Yes            | Yes              |
-| `sway`                     | Sway with the wlroots patches                                 | Yes            | No               |
-| `tmux`                     | Personal tmux config                                          | Yes            | Yes              |
+| `sway`                     | Sway with wlroots patches                                     | Yes            | No               |
+| `tmux`                     | Personal tmux configuration                                   | Yes            | Yes              |
 | `vicinae-extensions-pdsls` | PDSls integration for Vicinae                                 | Yes            | Yes              |
 | `vicinae-extensions-herdr` | Herdr integration for Vicinae                                 | Yes            | Yes              |
 | `zen-browser`              | Patched Zen release binaries                                  | Yes            | No               |
 | `update-zen`               | Python release updater built with uv2nix                      | Yes            | Yes              |
 
-Herdr's extension uses macOS tools to launch and focus terminals. Those actions
-may fail on Linux. Install the Herdr CLI separately.
+The Herdr extension uses macOS tools to launch and focus terminals. Those
+actions may fail on Linux. Install the Herdr CLI separately.
 
-## Use
+## Use a package
 
-Add the flake to your configuration:
+Add the flake input:
 
 ```nix
 inputs.dvnpkgs.url = "github:devon-systems/dvnpkgs";
 ```
 
-Select a package by name:
+Then select a package for the current system:
 
 ```nix
 home.packages = [
-	inputs.dvnpkgs.packages.${pkgs.stdenv.hostPlatform.system}.tg
+  inputs.dvnpkgs.packages.${pkgs.stdenv.hostPlatform.system}.tg
 ];
 ```
 
-## Develop
+## Development
 
-Enter the development shell and build a package:
+Enter the pinned development shell with `nix develop`, or run `direnv allow` to
+load it automatically. Package definitions live in `nix/packages/<name>/`.
+
+Build one package or every package supported on your system:
 
 ```sh
-nix develop
 just build tg
-```
-
-Build all packages for your system:
-
-```sh
 just build-all
 ```
 
-Format and check:
+Before committing, run:
 
 ```sh
 nix fmt
 nix flake check
 ```
 
-CI builds each exported package for its supported systems: `x86_64-linux` and
-`aarch64-darwin`. Pull requests build packages and checks whose Nix derivations
-change. Changes to `flake.nix`, `flake.lock`, or CI logic run every build, as do
-pushes to `master`. Formatting and flake evaluation run on every pull request.
+CI builds every exported package on its supported systems. Pull requests build
+packages and checks whose derivations change. Changes to the flake or CI logic
+run every build.
 
-## Update
+## Update dependencies
 
 Update a flake input and commit the new lockfile:
 
@@ -70,21 +66,22 @@ Update a flake input and commit the new lockfile:
 just update tg
 ```
 
-Preview a Zen release update with `nix run .#update-zen -- --check`.
-Apply it with `just update-zen`.
+Preview and apply a Zen update:
 
-Preview a Vicinae extension update with
-`nix develop -c python scripts/update-vicinae-extension.py pdsls --check`.
-Apply it with `just update-vicinae-extension pdsls`. Use `herdr` to update the
-Herdr extension.
+```sh
+nix run .#update-zen -- --check
+just update-zen
+```
 
-Daily workflows open signed bot PRs for Zen and the Vicinae extensions.
-Each PR shows the old and new pins, an upstream link, and quoted release notes
-when available. Auto-merge waits for the required `CI` check.
+Preview and apply a Vicinae extension update:
 
-The extension updater tracks each extension's directory in the Raycast
-repository. It skips unrelated commits and updates both source and npm
-dependency hashes. Each extension has its own pins and update PR.
+```sh
+nix develop -c python scripts/update-vicinae-extension.py pdsls --check
+just update-vicinae-extension pdsls
+```
+
+Use `herdr` instead of `pdsls` for the Herdr extension. Daily workflows open
+update PRs for Zen and both extensions. Auto-merge waits for CI to pass.
 
 ## Credits
 
