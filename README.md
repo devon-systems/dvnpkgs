@@ -15,6 +15,7 @@ My Nix packages and pinned upstream exports.
 | `vicinae-extensions-herdr` | Herdr integration for Vicinae                                 | Yes            | Yes              |
 | `zen-browser`              | Patched Zen release binaries                                  | Yes            | No               |
 | `update-zen`               | Python release updater built with uv2nix                      | Yes            | Yes              |
+| `generate-host-readmes`    | Host documentation from NixOS and macOS hardware reports      | Yes            | Yes              |
 
 The Herdr extension uses macOS tools to launch and focus terminals. Those
 actions may fail on Linux. Install the Herdr CLI separately.
