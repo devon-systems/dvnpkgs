@@ -4,7 +4,7 @@ This repository contains Nix packages and pinned upstream exports. Keep host and
 
 ## Change packages
 
-Define each package in `nix/packages/<name>/default.nix` as a flake-parts module declaring `perSystem.packages`. `flake.nix` loads `nix/` through import-tree; prefix helper Nix files with `_` to exclude them.
+Define each package in `nix/packages/<name>/default.nix` as a flake-parts module with `perSystem.packages`. `flake.nix` loads `nix/` through import-tree. Prefix helper Nix files with `_` to exclude them.
 
 Export for `x86_64-linux` and `aarch64-darwin` where supported. Keep export names stable.
 

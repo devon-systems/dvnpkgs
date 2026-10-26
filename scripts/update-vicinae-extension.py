@@ -12,7 +12,7 @@ EXTENSIONS = Path("nix/packages/vicinae-extensions")
 
 
 def run(*command: str) -> str:
-    """Run a command, leaving diagnostics visible and returning its output."""
+    """Return stdout and leave stderr visible."""
     return subprocess.run(
         command, check=True, text=True, stdout=subprocess.PIPE, timeout=1200
     ).stdout.strip()
