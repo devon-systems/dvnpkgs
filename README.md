@@ -17,6 +17,19 @@ My Nix packages and pinned upstream exports.
 | `update-zen`               | Python release updater built with uv2nix                      | Yes            | Yes              |
 | `generate-host-readmes`    | Host documentation from NixOS and macOS hardware reports      | Yes            | Yes              |
 
+The cluster helpers are also exported:
+
+- `check-k8s` validates a cluster repository from its working directory. Pass
+  `--kubernetes-version <major.minor.patch>` for the cluster's Kubernetes version.
+  It supports Linux and macOS.
+- `backup-metrics` publishes systemd Restic job results. It supports Linux.
+- `btrfs-metrics` publishes existing Btrfs scrub results and device errors.
+  It supports Linux.
+
+The reporters accept `--directory` for their output location. Deployment
+repositories own service definitions, timers, job selection, and metric paths.
+Helper regression tests and reporter lint and type checks run in this repository.
+
 The Herdr extension uses macOS tools to launch and focus terminals. Those
 actions may fail on Linux. Install the Herdr CLI separately.
 
