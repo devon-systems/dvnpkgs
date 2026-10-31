@@ -17,7 +17,6 @@ const HOST_EMOJIS: Record<string, string> = {
   goldenrod: "📻",
   mauville: "⚡",
   olivine: "⚓",
-  pacifidlog: "🪵",
   petalburg: "🌸",
   rustboro: "🪨",
   sootopolis: "🌊",
