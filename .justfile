@@ -14,6 +14,10 @@ update-zen:
     nix run .#update-zen
 
 [group('packages')]
+update-display-pilot-2:
+    nix develop -c python scripts/update-display-pilot-2.py
+
+[group('packages')]
 [positional-arguments]
 update-vicinae-extension extension:
     nix develop -c python scripts/update-vicinae-extension.py "$1"

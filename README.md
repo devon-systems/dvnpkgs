@@ -14,6 +14,7 @@ My Nix packages and pinned upstream exports.
 | `vicinae-extensions-pdsls` | PDSls integration for Vicinae                                 | Yes            | Yes              |
 | `vicinae-extensions-herdr` | Herdr integration for Vicinae                                 | Yes            | Yes              |
 | `zen-browser`              | Patched Zen release binaries                                  | Yes            | No               |
+| `display-pilot-2`          | BenQ Display Pilot 2 AppImage (unfree)                        | Yes            | No               |
 | `update-zen`               | Python release updater built with uv2nix                      | Yes            | Yes              |
 | `generate-host-readmes`    | Host documentation from NixOS and macOS hardware reports      | Yes            | Yes              |
 
@@ -32,6 +33,29 @@ Helper regression tests and reporter lint and type checks run in this repository
 
 The Herdr extension uses macOS tools to launch and focus terminals. Those
 actions may fail on Linux. Install the Herdr CLI separately.
+
+## Display Pilot 2
+
+Display Pilot 2 controls BenQ RD series monitors over DDC/CI. It needs
+read-write access to `/dev/i2c-*`. On NixOS, load `i2c-dev`, add your user to
+the `i2c` group, and allow unfree packages:
+
+```nix
+hardware.i2c.enable = true;
+users.users.<name>.extraGroups = ["i2c"];
+nixpkgs.config.allowUnfree = true;
+```
+
+Log out and back in after changing groups. Check access with `ls -l /dev/i2c-*`.
+
+BenQ supports GNOME on X11. The wrapper sets `QT_QPA_PLATFORM=xcb`, so Wayland
+sessions need XWayland. DDC/CI controls should work on any desktop, but
+resolution scaling uses the desktop's display API and may fail outside GNOME. On
+other desktops, install `gnome-control-center` separately to use the settings
+shortcut.
+
+The in-app updater cannot replace files in the Nix store. Update through this
+flake instead.
 
 ## Use a package
 
@@ -94,8 +118,17 @@ nix develop -c python scripts/update-vicinae-extension.py pdsls --check
 just update-vicinae-extension pdsls
 ```
 
-Use `herdr` instead of `pdsls` for the Herdr extension. Daily workflows open
-update PRs for Zen and both extensions. Auto-merge waits for CI to pass.
+Use `herdr` instead of `pdsls` for the Herdr extension.
+
+Preview and apply a Display Pilot 2 update:
+
+```sh
+nix develop -c python scripts/update-display-pilot-2.py --check
+just update-display-pilot-2
+```
+
+Daily workflows open update PRs for Zen, Display Pilot 2, and both extensions.
+Auto-merge waits for CI to pass.
 
 ## Credits
 
