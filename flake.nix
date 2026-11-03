@@ -34,6 +34,17 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    freepilot = {
+      url = "github:alyraffauf/freepilot";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.flake-parts.follows = "flake-parts";
+      inputs.import-tree.follows = "import-tree";
+      inputs.pyproject-nix.follows = "pyproject-nix";
+      inputs.uv2nix.follows = "uv2nix";
+      inputs.pyproject-build-systems.follows = "pyproject-build-systems";
+      inputs.treefmt-nix.follows = "treefmt-nix";
+    };
+
     llm-agents.url = "github:numtide/llm-agents.nix";
     crush-fork = {
       url = "github:alyraffauf/crush/fix/symlinked-skill-permissions";

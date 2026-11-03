@@ -124,6 +124,44 @@
         "type": "github"
       }
     },
+    "freepilot": {
+      "inputs": {
+        "flake-parts": [
+          "flake-parts"
+        ],
+        "import-tree": [
+          "import-tree"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "pyproject-build-systems": [
+          "pyproject-build-systems"
+        ],
+        "pyproject-nix": [
+          "pyproject-nix"
+        ],
+        "treefmt-nix": [
+          "treefmt-nix"
+        ],
+        "uv2nix": [
+          "uv2nix"
+        ]
+      },
+      "locked": {
+        "lastModified": 1793719742,
+        "narHash": "sha256-TBDJbrfrBxppDnqY9fcJkszfMkyeExm8pv/GQzUspJE=",
+        "owner": "alyraffauf",
+        "repo": "freepilot",
+        "rev": "bb8d01789b10bf5da748a32d4a22908468356b6b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "alyraffauf",
+        "repo": "freepilot",
+        "type": "github"
+      }
+    },
     "git-hooks-nix": {
       "inputs": {
         "flake-compat": "flake-compat",
@@ -365,6 +403,7 @@
       "inputs": {
         "crush-fork": "crush-fork",
         "flake-parts": "flake-parts",
+        "freepilot": "freepilot",
         "import-tree": "import-tree",
         "llm-agents": "llm-agents",
         "nix-wrapper-modules": "nix-wrapper-modules",
