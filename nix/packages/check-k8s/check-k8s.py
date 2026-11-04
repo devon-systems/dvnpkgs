@@ -10,7 +10,10 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+from collections.abc import Iterator
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Any, TypedDict
 from urllib.error import URLError
 from urllib.request import urlopen
 
@@ -44,13 +47,43 @@ CNPG_SECRET_SUFFIXES = ("app", "superuser", "ca", "server", "replication")
 CERT_MANAGER_NAMESPACE = "cert-manager"
 SOPS_VALUE = re.compile(r"^ENC\[AES256_GCM,data:([^,]*),")
 
+type Document = dict[str, Any]
+type Declarations = dict[str, Document]
+type Ancestors = dict[str, set[str]]
+type SecretKey = tuple[str, str]
 
-def render(*command):
+
+class Target(TypedDict):
+    path: Path
+    documents: list[Document]
+
+
+type Targets = dict[str, Target]
+
+
+@dataclass(frozen=True)
+class Ownership:
+    namespaces: dict[str, str]
+    secrets: dict[SecretKey, str]
+    # Owners of SOPS Secrets whose name and namespace are encrypted, keyed
+    # by their plaintext lengths; several owners can share one key.
+    encrypted_secrets: dict[tuple[int, int], set[str]]
+
+
+@dataclass(frozen=True)
+class ChartRenderContext:
+    root: Path
+    temporary: Path
+    kubernetes_version: str
+    ancestors: Ancestors
+
+
+def render(*command: str) -> list[Document]:
     result = subprocess.run(command, check=True, stdout=subprocess.PIPE, text=True)
     return [document for document in yaml.safe_load_all(result.stdout) if document]
 
 
-def local_path(root, path):
+def local_path(root: Path, path: str | Path) -> Path:
     """Resolve a repository path without allowing an escape."""
     resolved = (root / path).resolve()
     if not resolved.is_relative_to(root):
@@ -58,14 +91,14 @@ def local_path(root, path):
     return resolved
 
 
-def resource_name(document):
+def resource_name(document: Document) -> str:
     metadata = document["metadata"]
     return "/".join(
         filter(None, [document["kind"], metadata.get("namespace"), metadata["name"]])
     )
 
 
-def render_flux_release(version):
+def render_flux_release(version: str) -> list[Document]:
     if not re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+", version):
         raise ValueError(f"Invalid Flux release version: {version}")
     system = platform.system().lower()
@@ -99,7 +132,7 @@ def render_flux_release(version):
         return render(str(executable), "install", "--export")
 
 
-def check_flux_bundle(root):
+def check_flux_bundle(root: Path) -> None:
     """Compare controllers, CRDs, and RBAC with the declared Flux release."""
     path = root / "k8s/flux-system/gotk-components.yaml"
     documents = list(yaml.safe_load_all(path.read_text()))
@@ -112,7 +145,7 @@ def check_flux_bundle(root):
     version = namespace["metadata"]["labels"]["app.kubernetes.io/version"]
     published = render_flux_release(version)
 
-    def resources(bundle):
+    def resources(bundle: list[Document]) -> dict[str, Document]:
         for document in bundle:
             if document["kind"] == "Deployment":
                 for container in document["spec"]["template"]["spec"]["containers"]:
@@ -134,11 +167,11 @@ def check_flux_bundle(root):
     print(f"Flux controllers, CRDs, and RBAC match release {version}", flush=True)
 
 
-def discover(root):
+def discover(root: Path) -> tuple[Targets, Declarations]:
     """Render the local Flux targets and retain their individual ownership."""
-    pending = [("flux-system", root / "k8s/flux-system")]
-    targets = {}
-    declarations = {}
+    pending: list[tuple[str, Path]] = [("flux-system", root / "k8s/flux-system")]
+    targets: Targets = {}
+    declarations: Declarations = {}
     while pending:
         name, directory = pending.pop()
         if name in targets:
@@ -188,9 +221,9 @@ def discover(root):
     return targets, declarations
 
 
-def dependency_order(declarations):
+def dependency_order(declarations: Declarations) -> Ancestors:
     """Validate dependencies and return their prerequisite-first order."""
-    dependencies = {}
+    dependencies: dict[str, set[str]] = {}
     for name, document in declarations.items():
         dependencies[name] = set()
         for dependency in document["spec"].get("dependsOn", []):
@@ -200,7 +233,7 @@ def dependency_order(declarations):
             ):
                 raise ValueError(f"{name}: missing dependency {dependency}")
             dependencies[name].add(dependency["name"])
-    ordered = []
+    ordered: list[str] = []
     remaining = dict(dependencies)
     while remaining:
         ready = sorted(
@@ -211,7 +244,7 @@ def dependency_order(declarations):
         ordered.extend(ready)
         for name in ready:
             del remaining[name]
-    ancestors = {}
+    ancestors: Ancestors = {}
     for name in ordered:
         ancestors[name] = set(dependencies[name])
         for dependency in dependencies[name]:
@@ -220,9 +253,9 @@ def dependency_order(declarations):
     return ancestors
 
 
-def check_roots(root, targets):
+def check_roots(root: Path, targets: Targets) -> None:
     """Reject Kustomize directories that no Flux target or local base reaches."""
-    reached = set()
+    reached: set[Path] = set()
     pending = [target["path"] for target in targets.values()]
     while pending:
         directory = pending.pop()
@@ -239,7 +272,9 @@ def check_roots(root, targets):
             raise ValueError(f"Unreachable Kustomization: {path.relative_to(root)}")
 
 
-def check_tailscale_chart(resource, repository, temporary):
+def check_tailscale_chart(
+    resource: Document, repository: Document, temporary: Path
+) -> None:
     """Verify public resource settings against the pinned operator chart."""
     spec = resource["spec"]
     values = spec.get("values", {})
@@ -282,7 +317,9 @@ def check_tailscale_chart(resource, repository, temporary):
     print(f"Verified operator resources: {resource_name(resource)}", flush=True)
 
 
-def chart_version_exists(repository, chart, version):
+def chart_version_exists(
+    repository: Document, chart: str, version: object
+) -> tuple[bool, list[str]]:
     url = repository["spec"]["url"]
     if repository["spec"].get("type") == "oci" or url.startswith("oci://"):
         command = ["helm", "show", "chart", f"{url.rstrip('/')}/{chart}"]
@@ -298,9 +335,12 @@ def chart_version_exists(repository, chart, version):
     return result.returncode == 0, result.stderr.strip().splitlines()[-1:]
 
 
-def render_charts(root, targets, temporary, version, ancestors):
+def render_charts(context: ChartRenderContext, targets: Targets) -> None:
     """Render local charts and check the pinned Tailscale operator's public values."""
-    repositories, sources = {}, {}
+    root, temporary = context.root, context.temporary
+    version, ancestors = context.kubernetes_version, context.ancestors
+    repositories: dict[tuple[str, str], Document] = {}
+    sources: dict[tuple[str, str, str], str] = {}
     for owner, target in targets.items():
         for document in target["documents"]:
             if document.get("kind") in {"HelmRepository", "OCIRepository"}:
@@ -348,15 +388,17 @@ def render_charts(root, targets, temporary, version, ancestors):
                     source.get("kind") == "HelmRepository"
                     and chart.get("chart") == "tailscale-operator"
                 ):
-                    key = (
+                    repository_key = (
                         source.get("namespace", resource["metadata"]["namespace"]),
                         source["name"],
                     )
-                    if key not in repositories:
+                    if repository_key not in repositories:
                         raise ValueError(
-                            f"{owner}: missing Tailscale HelmRepository {key}"
+                            f"{owner}: missing Tailscale HelmRepository {repository_key}"
                         )
-                    check_tailscale_chart(resource, repositories[key], temporary)
+                    check_tailscale_chart(
+                        resource, repositories[repository_key], temporary
+                    )
                     continue
                 print(f"Not rendered: upstream {resource_name(resource)}")
                 continue
@@ -397,9 +439,12 @@ def render_charts(root, targets, temporary, version, ancestors):
             target["documents"].extend(rendered)
 
 
-def check_ownership(targets):
+def check_ownership(targets: Targets) -> Ownership:
     """Require one visible owner for each resource and namespace."""
-    owners, namespaces, secrets = {}, {}, {}
+    owners: dict[tuple[str, str, str, str], str] = {}
+    namespaces: dict[str, str] = {}
+    secrets: dict[SecretKey, str] = {}
+    encrypted_secrets: dict[tuple[int, int], set[str]] = {}
     for owner, target in targets.items():
         visible = 0
         for document in target["documents"]:
@@ -420,10 +465,11 @@ def check_ownership(targets):
                         secrets[key] = owner
                 elif encrypted_length(fields[0]) in {None, len("Secret")}:
                     # AES-GCM preserves the plaintext length of encrypted metadata.
-                    lengths = tuple(
-                        encrypted_length(field) or len(field) for field in fields[1:]
+                    lengths = (
+                        encrypted_length(fields[1]) or len(fields[1]),
+                        encrypted_length(fields[2]) or len(fields[2]),
                     )
-                    secrets.setdefault(lengths, set()).add(owner)
+                    encrypted_secrets.setdefault(lengths, set()).add(owner)
                 continue
             metadata = document["metadata"]
             identity = (
@@ -449,18 +495,20 @@ def check_ownership(targets):
                 raise ValueError(f"{owner}: unencrypted {resource_name(document)}")
             visible += 1
         print(f"Ownership {owner}: {visible} visible resources")
-    return namespaces, secrets
+    return Ownership(
+        namespaces=namespaces, secrets=secrets, encrypted_secrets=encrypted_secrets
+    )
 
 
-def encrypted_length(value):
+def encrypted_length(value: object) -> int | None:
     """Return the plaintext length of a SOPS value, or None if unencrypted."""
     match = SOPS_VALUE.match(value) if isinstance(value, str) else None
     return len(base64.b64decode(match.group(1))) if match else None
 
 
-def generated_secrets(targets):
+def generated_secrets(targets: Targets) -> set[SecretKey]:
     """Return Secrets that controllers create from visible resources."""
-    generated = set()
+    generated: set[SecretKey] = set()
     for target in targets.values():
         for document in target["documents"]:
             if "sops" in document:
@@ -479,19 +527,19 @@ def generated_secrets(targets):
     return generated
 
 
-def find_named(value, keys):
+def find_referenced_names(value: object, keys: set[str]) -> Iterator[str]:
     """Find name fields under the given reference keys in arbitrary values."""
     if isinstance(value, dict):
         for key, child in value.items():
             if key in keys and isinstance(child, dict) and "name" in child:
                 yield child["name"]
-            yield from find_named(child, keys)
+            yield from find_referenced_names(child, keys)
     elif isinstance(value, list):
         for child in value:
-            yield from find_named(child, keys)
+            yield from find_referenced_names(child, keys)
 
 
-def pod_template(document):
+def pod_template(document: Document) -> Document | None:
     kind = document.get("kind")
     if kind == "Pod":
         return document
@@ -502,28 +550,28 @@ def pod_template(document):
     return None
 
 
-def secret_references(document):
+def secret_references(document: Document) -> set[SecretKey]:
     """Find the supported explicit Secret references as (namespace, name)."""
     namespace = document["metadata"].get("namespace", "default")
     kind, spec = document.get("kind"), document.get("spec", {})
-    references = set()
+    references: set[SecretKey] = set()
     if kind == "HelmRelease":
         # Rendered pods run in the target namespace.
         target = spec.get("targetNamespace", namespace)
         references.update(
             (target, name)
-            for name in find_named(
+            for name in find_referenced_names(
                 spec.get("values", {}), {"secretKeyRef", "secretRef"}
             )
         )
     if kind == "Cluster" and document["apiVersion"].startswith("postgresql.cnpg.io/"):
-        names = [
+        names: list[str] = [
             role["passwordSecret"]["name"]
             for role in spec.get("managed", {}).get("roles", [])
             if "passwordSecret" in role
         ]
-        names += find_named(spec.get("bootstrap", {}), {"secret"})
-        names += find_named(spec, {"superuserSecret"})
+        names += find_referenced_names(spec.get("bootstrap", {}), {"secret"})
+        names += find_referenced_names(spec, {"superuserSecret"})
         references.update((namespace, name) for name in names)
     if kind == "ObjectStore" and document["apiVersion"].startswith(
         "barmancloud.cnpg.io/"
@@ -531,7 +579,7 @@ def secret_references(document):
         credentials = spec.get("configuration", {}).get("s3Credentials", {})
         references.update(
             (namespace, name)
-            for name in find_named(
+            for name in find_referenced_names(
                 credentials,
                 {"accessKeyId", "secretAccessKey", "region", "sessionToken"},
             )
@@ -540,7 +588,7 @@ def secret_references(document):
         issuer = CERT_MANAGER_NAMESPACE if kind == "ClusterIssuer" else namespace
         references.update(
             (issuer, name)
-            for name in find_named(
+            for name in find_referenced_names(
                 spec.get("acme", {}).get("solvers", []),
                 {"apiTokenSecretRef", "apiKeySecretRef", "secretAccessKeySecretRef"},
             )
@@ -550,9 +598,9 @@ def secret_references(document):
     }
 
 
-def local_secret_references(document):
+def local_secret_references(document: Document) -> set[str]:
     """Find Secret names that resolve in the document's own namespace."""
-    names = set()
+    names: set[str] = set()
     if document.get("kind") == "HelmRelease":
         names.update(
             reference["name"]
@@ -587,8 +635,12 @@ def local_secret_references(document):
     return names
 
 
-def check_prerequisites(targets, ancestors, namespaces, secrets):
+def check_prerequisites(
+    targets: Targets, ancestors: Ancestors, ownership: Ownership
+) -> None:
     """Check ordering for visible namespaces and known encrypted Secrets."""
+    namespaces, secrets = ownership.namespaces, ownership.secrets
+    encrypted_secrets = ownership.encrypted_secrets
     generated = generated_secrets(targets)
     issuers = {
         document["metadata"]["name"]: owner
@@ -633,21 +685,21 @@ def check_prerequisites(targets, ancestors, namespaces, secrets):
                     if key in generated:
                         continue
                     # Fall back to SOPS Secrets whose name and namespace are encrypted.
-                    producer = secrets.get(tuple(map(len, key)))
-                    if producer is None:
+                    encrypted_owners = encrypted_secrets.get((len(key[0]), len(key[1])))
+                    if encrypted_owners is None:
                         raise ValueError(
                             f"{owner}: Secret {'/'.join(key)} is not declared or generated"
                         )
-                    if owner in producer or producer & ancestors[owner]:
+                    if owner in encrypted_owners or encrypted_owners & ancestors[owner]:
                         continue
-                    producer = ", ".join(sorted(producer))
+                    producer = ", ".join(sorted(encrypted_owners))
                 if producer != owner and producer not in ancestors[owner]:
                     raise ValueError(
                         f"{owner}: Secret {'/'.join(key)} requires dependency {producer}"
                     )
 
 
-def check_security(targets):
+def check_security(targets: Targets) -> None:
     """Require explicit pod defaults or a setting-specific exception reason."""
     prefix = "security.aly.codes/exception-"
     rules = {
@@ -734,7 +786,7 @@ def check_security(targets):
                 )
 
 
-def validate_schemas(targets, temporary, version):
+def validate_schemas(targets: Targets, temporary: Path, version: str) -> None:
     """Validate visible documents with pinned CRD schemas and strict failures."""
     documents = [
         document for target in targets.values() for document in target["documents"]
@@ -769,7 +821,7 @@ def validate_schemas(targets, temporary, version):
     )
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--kubernetes-version", required=True)
     parser.add_argument(
@@ -785,11 +837,18 @@ def main():
     targets, declarations = discover(root)
     ancestors = dependency_order(declarations)
     check_roots(root, targets)
-    with tempfile.TemporaryDirectory(prefix="check-k8s-") as temporary:
-        temporary = Path(temporary)
-        render_charts(root, targets, temporary, args.kubernetes_version, ancestors)
-        namespaces, secrets = check_ownership(targets)
-        check_prerequisites(targets, ancestors, namespaces, secrets)
+    with tempfile.TemporaryDirectory(prefix="check-k8s-") as temporary_directory:
+        temporary = Path(temporary_directory)
+        render_charts(
+            ChartRenderContext(
+                root=root,
+                temporary=temporary,
+                kubernetes_version=args.kubernetes_version,
+                ancestors=ancestors,
+            ),
+            targets,
+        )
+        check_prerequisites(targets, ancestors, check_ownership(targets))
         check_security(targets)
         validate_schemas(targets, temporary, args.kubernetes_version)
 
