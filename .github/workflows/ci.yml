@@ -36,17 +36,10 @@ jobs:
         run: |
           nix fmt --no-update-lock-file -- --ci
           nix flake check --all-systems --no-build --no-update-lock-file
-      - name: Select native builds
+      - name: Select uncached builds
         id: plan
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
-          arguments=()
-          if [[ -n "$BASE_SHA" ]]; then
-            git fetch --no-tags --depth=1 origin "$BASE_SHA"
-            arguments+=(--base "$BASE_SHA")
-          fi
-          python3 scripts/ci-plan.py "${arguments[@]}" > "$RUNNER_TEMP/ci-plan.json"
+          python3 scripts/ci-plan.py > "$RUNNER_TEMP/ci-plan.json"
           echo "matrix=$(jq -c . "$RUNNER_TEMP/ci-plan.json")" >> "$GITHUB_OUTPUT"
           echo "has-builds=$(jq '.include | length > 0' "$RUNNER_TEMP/ci-plan.json")" >> "$GITHUB_OUTPUT"
           jq -r '"Selected builds: \(.include | length)", (.include[] | "- " + .name)' "$RUNNER_TEMP/ci-plan.json" >> "$GITHUB_STEP_SUMMARY"
