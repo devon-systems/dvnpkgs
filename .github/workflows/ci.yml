@@ -36,7 +36,7 @@ jobs:
         run: |
           nix fmt --no-update-lock-file -- --ci
           nix flake check --all-systems --no-build --no-update-lock-file
-      - name: Select native builds
+      - name: Select CI builds
         id: plan
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
