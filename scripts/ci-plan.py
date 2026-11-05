@@ -3,8 +3,13 @@
 An output in a cache already built successfully, either in an earlier CI run
 that pushed it to Cachix or on Hydra. An output in neither cache needs a
 build, whether its derivation changed or an earlier run never finished it.
+
+A pull request that changes CI also gets one build per system, so the build
+job still runs on each runner when every output is cached. A cached build
+only substitutes, so this checks the job's setup, not compiling or pushing.
 """
 
+import argparse
 import http.client
 import json
 import subprocess
@@ -78,8 +83,26 @@ def is_cached(output: str) -> bool:
     return False
 
 
-def plan_builds() -> list[dict[str, str]]:
-    """Select every package and check whose output isn't cached."""
+def ci_files_changed(base: str) -> bool:
+    """Return whether the workflows or this planner differ from base."""
+    changed = subprocess.run(
+        ["git", "diff", "--name-only", "--no-renames", base, "--"],
+        check=True,
+        stdout=subprocess.PIPE,
+        text=True,
+    ).stdout.splitlines()
+    return any(
+        path.startswith(".github/workflows/") or path == "scripts/ci-plan.py"
+        for path in changed
+    )
+
+
+def plan_builds(base: str | None) -> list[dict[str, str]]:
+    """Select every package and check whose output isn't cached.
+
+    When a pull request changes CI itself, also select one build per system,
+    so the build job runs on every runner even if everything is cached.
+    """
     candidates = [
         (kind, system, name, output)
         for kind, systems in evaluate_outputs().items()
@@ -89,20 +112,31 @@ def plan_builds() -> list[dict[str, str]]:
     ]
     with ThreadPoolExecutor(LOOKUP_WORKERS) as pool:
         cached = list(pool.map(is_cached, (output for *_, output in candidates)))
+    selected = [
+        candidate for candidate, hit in zip(candidates, cached, strict=True) if not hit
+    ]
+    if base is not None and ci_files_changed(base):
+        covered = {system for _, system, _, _ in selected}
+        for candidate in candidates:
+            if candidate[1] not in covered:
+                covered.add(candidate[1])
+                selected.append(candidate)
     return [
         {
             "name": f"{'Build' if kind == 'packages' else 'Check'} {name} ({system})",
             "runner": RUNNERS[system],
             "installable": f"{kind}.{system}.{name}",
         }
-        for (kind, system, name, _), hit in zip(candidates, cached, strict=True)
-        if not hit
+        for kind, system, name, _ in selected
     ]
 
 
 def main() -> None:
     """Write the selected GitHub Actions matrix to standard output."""
-    print(json.dumps({"include": plan_builds()}))
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--base", help="Base commit SHA for a pull request")
+    arguments = parser.parse_args()
+    print(json.dumps({"include": plan_builds(arguments.base)}))
 
 
 if __name__ == "__main__":
