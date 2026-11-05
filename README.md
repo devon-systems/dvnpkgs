@@ -9,6 +9,8 @@ My Nix packages and pinned upstream exports.
 | `tg`                       | Re-export from `aly.codes/tg`                                 | Yes            | Yes              |
 | `tgmcp`                    | Re-export from `aly.codes/tg`                                 | Yes            | Yes              |
 | `crush`                    | Personal [crush](https://github.com/charmbracelet/crush) fork | Yes            | Yes              |
+| `t3code`                   | Forked T3 Code source build with bundled coding agents        | Yes            | Yes              |
+| `t3code-desktop`           | T3 Code desktop with Linux OAuth callback support             | Yes            | Yes              |
 | `sway`                     | Sway with wlroots patches                                     | Yes            | No               |
 | `tmux`                     | Personal tmux configuration                                   | Yes            | Yes              |
 | `vicinae-extensions-pdsls` | PDSls integration for Vicinae                                 | Yes            | Yes              |
