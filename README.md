@@ -17,7 +17,7 @@ My Nix packages and pinned upstream exports.
 | `vicinae-extensions-herdr` | Herdr integration for Vicinae                                 | Yes            | Yes              |
 | `zen-browser`              | Patched Zen release binaries                                  | Yes            | No               |
 | `display-pilot-2`          | BenQ Display Pilot 2 AppImage (unfree)                        | Yes            | No               |
-| `freepilot`                | Re-export from `alyraffauf/freepilot`                         | Yes            | No               |
+| `freepilot`                | Rust monitor controls with a GPUI app and CLI                 | Yes            | No               |
 | `update-zen`               | Python release updater built with uv2nix                      | Yes            | Yes              |
 | `generate-host-readmes`    | Host documentation from NixOS and macOS hardware reports      | Yes            | Yes              |
 
@@ -51,9 +51,11 @@ nixpkgs.config.allowUnfree = true;
 
 Log out and back in after changing groups. Check access with `ls -l /dev/i2c-*`.
 
-[freepilot](https://github.com/alyraffauf/freepilot) is a free command-line
-alternative that uses the same i2c access. It's exported here as `freepilot`,
-and its flake also has NixOS and Home Manager modules.
+[Freepilot](https://github.com/alyraffauf/freepilot) is a free alternative with
+a GPUI desktop app, tray picture-mode controls, and CLI subcommands. It uses
+`ddcutil` with the same I²C permissions and opens the GUI when run without a
+subcommand. The `freepilot` export includes its desktop entry and runtime
+dependencies. Its upstream flake also provides NixOS and Home Manager modules.
 
 BenQ supports GNOME on X11. The wrapper sets `QT_QPA_PLATFORM=xcb`, so Wayland
 sessions need XWayland. DDC/CI controls should work on any desktop, but
