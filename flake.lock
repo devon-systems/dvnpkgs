@@ -434,11 +434,11 @@
         "uv2nix": "uv2nix"
       },
       "locked": {
-        "lastModified": 1793637228,
-        "narHash": "sha256-lneQ7RTa80lmUu4Cs4oMAC5vU1m2F20kXMdx/eZLulc=",
+        "lastModified": 1794440973,
+        "narHash": "sha256-09gSPdyrpmudgcOpknA+tT7A37GkrU4NUa5FlCW7pkU=",
         "ref": "refs/heads/master",
-        "rev": "3a044d3226f722282289d427a4ecdfc936f45e7e",
-        "revCount": 186,
+        "rev": "3cc579083e9578cccef6d2bcf4c51e9ca15958b2",
+        "revCount": 207,
         "type": "git",
         "url": "https://tangled.org/aly.codes/tg"
       },
