@@ -34,23 +34,6 @@
         "type": "github"
       }
     },
-    "crush-fork": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1790529557,
-        "narHash": "sha256-48opzStiBYEXpnpnwlddu4bjvzTI48c0A1E4/zcdj1k=",
-        "owner": "alyraffauf",
-        "repo": "crush",
-        "rev": "ff15e10bb4dfd8250677d70d7acb9b1653c17e2b",
-        "type": "github"
-      },
-      "original": {
-        "owner": "alyraffauf",
-        "ref": "fix/symlinked-skill-permissions",
-        "repo": "crush",
-        "type": "github"
-      }
-    },
     "flake-compat": {
       "flake": false,
       "locked": {
@@ -392,7 +375,6 @@
     },
     "root": {
       "inputs": {
-        "crush-fork": "crush-fork",
         "flake-parts": "flake-parts",
         "freepilot": "freepilot",
         "import-tree": "import-tree",

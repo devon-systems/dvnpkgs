@@ -43,10 +43,6 @@
     };
 
     llm-agents.url = "github:numtide/llm-agents.nix";
-    crush-fork = {
-      url = "github:alyraffauf/crush/fix/symlinked-skill-permissions";
-      flake = false;
-    };
 
     treefmt-nix = {
       url = "github:numtide/treefmt-nix";

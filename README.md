@@ -4,22 +4,21 @@ My Nix packages and pinned upstream exports.
 
 ## Packages
 
-| Export                     | Source                                                        | `x86_64-linux` | `aarch64-darwin` |
-| -------------------------- | ------------------------------------------------------------- | -------------- | ---------------- |
-| `tg`                       | Re-export from `aly.codes/tg`                                 | Yes            | Yes              |
-| `tgmcp`                    | Re-export from `aly.codes/tg`                                 | Yes            | Yes              |
-| `crush`                    | Personal [crush](https://github.com/charmbracelet/crush) fork | Yes            | Yes              |
-| `t3code`                   | Forked T3 Code source build with bundled coding agents        | Yes            | Yes              |
-| `t3code-desktop`           | T3 Code desktop with Linux OAuth callback support             | Yes            | Yes              |
-| `sway`                     | Sway with wlroots patches                                     | Yes            | No               |
-| `tmux`                     | Personal tmux configuration                                   | Yes            | Yes              |
-| `vicinae-extensions-pdsls` | PDSls integration for Vicinae                                 | Yes            | Yes              |
-| `vicinae-extensions-herdr` | Herdr integration for Vicinae                                 | Yes            | Yes              |
-| `zen-browser`              | Patched Zen release binaries                                  | Yes            | No               |
-| `display-pilot-2`          | BenQ Display Pilot 2 AppImage (unfree)                        | Yes            | No               |
-| `freepilot`                | Rust monitor controls with a GPUI app and CLI                 | Yes            | No               |
-| `update-zen`               | Python release updater built with uv2nix                      | Yes            | Yes              |
-| `generate-host-readmes`    | Host documentation from NixOS and macOS hardware reports      | Yes            | Yes              |
+| Export                     | Source                                                   | `x86_64-linux` | `aarch64-darwin` |
+| -------------------------- | -------------------------------------------------------- | -------------- | ---------------- |
+| `tg`                       | Re-export from `aly.codes/tg`                            | Yes            | Yes              |
+| `tgmcp`                    | Re-export from `aly.codes/tg`                            | Yes            | Yes              |
+| `t3code`                   | Forked T3 Code source build with bundled coding agents   | Yes            | Yes              |
+| `t3code-desktop`           | T3 Code desktop with Linux OAuth callback support        | Yes            | Yes              |
+| `sway`                     | Sway with wlroots patches                                | Yes            | No               |
+| `tmux`                     | Personal tmux configuration                              | Yes            | Yes              |
+| `vicinae-extensions-pdsls` | PDSls integration for Vicinae                            | Yes            | Yes              |
+| `vicinae-extensions-herdr` | Herdr integration for Vicinae                            | Yes            | Yes              |
+| `zen-browser`              | Patched Zen release binaries                             | Yes            | No               |
+| `display-pilot-2`          | BenQ Display Pilot 2 AppImage (unfree)                   | Yes            | No               |
+| `freepilot`                | Rust monitor controls with a GPUI app and CLI            | Yes            | No               |
+| `update-zen`               | Python release updater built with uv2nix                 | Yes            | Yes              |
+| `generate-host-readmes`    | Host documentation from NixOS and macOS hardware reports | Yes            | Yes              |
 
 The cluster helpers are also exported:
 
