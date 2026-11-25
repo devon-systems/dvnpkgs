@@ -1,0 +1,18 @@
+name: update-t3code
+
+"on":
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  update-t3code:
+    uses: ./.github/workflows/update-package.yml
+    secrets: inherit
+    with:
+      package: t3code
+      command: nix develop -c bash scripts/update-t3code.sh
+      paths: nix/packages/t3code/_unwrapped.nix

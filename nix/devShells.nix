@@ -8,6 +8,7 @@ _: {
         pkgs.just
         pkgs.nixd
         pkgs.nix-prefetch-git
+        pkgs.nix-update
         pkgs.prefetch-npm-deps
         pkgs.python3
         pkgs.ruff
