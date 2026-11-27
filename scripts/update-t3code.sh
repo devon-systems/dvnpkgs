@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# nix-update uses nixpkgs' Nix, which needs the source tree materialized by
+# Determinate Nix before reading its shared flake cache.
+export NIX_CONFIG="${NIX_CONFIG:-}"$'\n''lazy-trees = false'
+
 package=nix/packages/t3code/_unwrapped.nix
 before=$(nix eval --raw .#t3code.version)
 tag=$(gh release view --repo pingdotgg/t3code --json tagName --jq .tagName)
